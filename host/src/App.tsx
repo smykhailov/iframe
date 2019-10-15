@@ -5,7 +5,7 @@ const App: React.FC = () => {
     <div>
       <h1>Application Host</h1>
 
-      <iframe src="http://localhost:3001/" width="500" height="400" title="child"></iframe>
+      <iframe src="http://localhost:3001/" width="600" height="500" title="child"></iframe>
     </div>
   );
 }

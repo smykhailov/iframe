@@ -22,9 +22,10 @@ class App extends Component<{}, AppState> {
 
   render() {
     return (
-      <div className="App">
+      <div>
         <h1>Child Host</h1>
         <button onClick={this.openWindow}>Open Window</button>
+        <button onClick={this.sendMessage}>Send Message</button>
         <button onClick={() => this.setState({message: { data: {} } as any})}>Clear</button>
 
         <div>
@@ -33,6 +34,8 @@ class App extends Component<{}, AppState> {
           <div><strong>Message Data: </strong> <span>{this.state.message.data.msg}</span></div>
           <div><strong>Message Type: </strong> <span>{this.state.message.type}</span></div>
         </div>
+
+        <iframe src="http://localhost:3002/" width="500" height="250" title="Third Party"></iframe>
       </div>
     );
   }
@@ -41,6 +44,13 @@ class App extends Component<{}, AppState> {
     const childWindow: Window = window.open("", "ChildWindow", "left=200,top=100,width=500,height=500")!;
 
     ReactDOM.render(<ChildWindow renderWindow={childWindow} />, childWindow.document.body);
+  }
+
+  sendMessage = () => {
+    window.postMessage({
+      to: "*",
+      msg: "To All Windows"
+    }, "*");
   }
 }
 
