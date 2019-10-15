@@ -6,18 +6,18 @@ class App extends Component {
       <div>
         <h1>Third Party App</h1>
 
-        <button onClick={this.sendTo3rdPartyHost}>Send to 3rd party app host</button>
+        <button onClick={this.sendToChildWindow}>Send to child window</button>
         <button onClick={this.sendToChildHost}>Send to child host</button>
       </div>
     );
   }
 
-  sendTo3rdPartyHost = () => {
+  sendToChildWindow = () => {
     
   }
 
   sendToChildHost = () => {
-    
+
   }
 }
 

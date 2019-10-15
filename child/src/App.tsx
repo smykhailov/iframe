@@ -1,12 +1,38 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 
-class App extends Component {
+type AppState = { message: MessageEvent }
+
+class App extends Component<{}, AppState> {
+  constructor(props: {}) {
+    super(props);
+
+    window.addEventListener("message", (ev: MessageEvent) => {
+      // if (ev.data.to !== "ChildHost") {
+      //   return;
+      // }
+      
+      this.setState({message: ev});
+    });
+
+    this.state = {
+      message: { data: {} } as any
+    }
+  }
+
   render() {
     return (
       <div className="App">
         <h1>Child Host</h1>
         <button onClick={this.openWindow}>Open Window</button>
+        <button onClick={() => this.setState({message: { data: {} } as any})}>Clear</button>
+
+        <div>
+          <div><strong>Message Origin: </strong> <span>{this.state.message.origin}</span></div>
+          <div><strong>Message Data To: </strong> <span>{this.state.message.data.to}</span></div>
+          <div><strong>Message Data: </strong> <span>{this.state.message.data.msg}</span></div>
+          <div><strong>Message Type: </strong> <span>{this.state.message.type}</span></div>
+        </div>
       </div>
     );
   }
@@ -18,25 +44,77 @@ class App extends Component {
   }
 }
 
-class ChildWindow extends Component<{renderWindow: Window}> {
+type ChildWindowProps = {renderWindow: Window};
+type ChildWindowState = { message: MessageEvent }
+
+class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
+  constructor(props: ChildWindowProps) {
+    super(props);
+
+    window.addEventListener("message", (ev: MessageEvent) => {
+      // if (ev.data.to !== "ChildWindowHost") {
+      //   return;
+      // }
+
+      this.setState({message: ev});
+    });
+
+    props.renderWindow.addEventListener("message", (ev: MessageEvent) => {
+      // if (ev.data.to !== "ChildWindow") {
+      //   return;
+      // }
+
+      this.setState({message: ev});
+    });
+
+    this.state = {
+      message: { data: {} } as any
+    }
+  }
+
   render() {
     return (
       <div>
         <h1>Child Window (3rd party app host)</h1>
 
-        <button onClick={this.sendToChildHost}>Send to Child Host</button>
-        <button onClick={this.sendToThirdPartyApp}>Send to Third Party App</button>
+        <button onClick={() => this.setState({message: { data: {} } as any})}>Clear</button>
+
+        <div>
+          <div><strong>Message Origin: </strong> <span>{this.state.message.origin}</span></div>
+          <div><strong>Message Data To: </strong> <span>{this.state.message.data.to}</span></div>
+          <div><strong>Message Data: </strong> <span>{this.state.message.data.msg}</span></div>
+          <div><strong>Message Type: </strong> <span>{this.state.message.type}</span></div>
+        </div>
+
+        <button onClick={this.sendToChildHostWdw}>Send to Child Host (using window)</button>
+        <button onClick={this.sendToThirdPartyAppWdw}>Send to Third Party App (using window)</button>
+        <button onClick={this.sendToChildHostTgt}>Send to Child Host (using target)</button>
+        <button onClick={this.sendToThirdPartyAppTgt}>Send to Third Party App (using target)</button>
 
         <iframe src="http://localhost:3002/" width="100%" height="300" title="Third Party"></iframe>
       </div>
     );
   }
 
-  sendToChildHost = () => {
-
+  sendToChildHostWdw = () => {
+    window.postMessage({
+      to: "ChildHost",
+      msg: "Send To Child Host Using Window"
+    }, "*");
   }
 
-  sendToThirdPartyApp = () => {
+  sendToThirdPartyAppWdw = () => {
+    
+  }
+
+  sendToChildHostTgt = () => {
+    this.props.renderWindow.postMessage({
+      to: "ChildHost",
+      msg: "Send To Child Host Using Target"
+    }, "*");
+  }
+
+  sendToThirdPartyAppTgt = () => {
     
   }
 }
