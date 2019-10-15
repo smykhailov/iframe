@@ -77,6 +77,11 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
       <div>
         <h1>Child Window (3rd party app host)</h1>
 
+        <button onClick={this.sendToChildHostWdw}>Send to Child Host (using window)</button>
+        <button onClick={this.sendToThirdPartyAppWdw}>Send to Third Party App (using window)</button>
+        <button onClick={this.sendToChildHostTgt}>Send to Child Host (using target)</button>
+        <button onClick={this.sendToThirdPartyAppTgt}>Send to Third Party App (using target)</button>
+
         <button onClick={() => this.setState({message: { data: {} } as any})}>Clear</button>
 
         <div>
@@ -85,11 +90,6 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
           <div><strong>Message Data: </strong> <span>{this.state.message.data.msg}</span></div>
           <div><strong>Message Type: </strong> <span>{this.state.message.type}</span></div>
         </div>
-
-        <button onClick={this.sendToChildHostWdw}>Send to Child Host (using window)</button>
-        <button onClick={this.sendToThirdPartyAppWdw}>Send to Third Party App (using window)</button>
-        <button onClick={this.sendToChildHostTgt}>Send to Child Host (using target)</button>
-        <button onClick={this.sendToThirdPartyAppTgt}>Send to Third Party App (using target)</button>
 
         <iframe src="http://localhost:3002/" width="100%" height="300" title="Third Party"></iframe>
       </div>
@@ -104,7 +104,10 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
   }
 
   sendToThirdPartyAppWdw = () => {
-    
+    window.postMessage({
+      to: "ThirdPartyApp",
+      msg: "Send To Third Party App Using Window"
+    }, "*");
   }
 
   sendToChildHostTgt = () => {
@@ -115,7 +118,10 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
   }
 
   sendToThirdPartyAppTgt = () => {
-    
+    this.props.renderWindow.postMessage({
+      to: "ThirdPartyApp",
+      msg: "Send To Third Party App Using Target"
+    }, "*");
   }
 }
 
