@@ -4,13 +4,33 @@ import ReactDOM from 'react-dom';
 type AppState = { message: MessageEvent }
 
 class App extends Component<{}, AppState> {
+  private iframeElementRef: React.RefObject<HTMLIFrameElement> = React.createRef();
   constructor(props: {}) {
     super(props);
 
     window.addEventListener("message", (ev: MessageEvent) => {
-      // if (ev.data.to !== "ChildHost") {
-      //   return;
-      // }
+      if (ev.data.to !== "ChildHost") {
+        return;
+      }
+
+      window.postMessage({
+        to: "ChildWindow",
+        name: "Init Response",
+        origin: `ChildHost:${window.origin}`,
+        originalEvent: ev.data
+      }, '*')
+
+      if(this.iframeElementRef.current) {
+        const frame = this.iframeElementRef.current;
+        const target = frame.contentWindow;
+
+        if(target) {
+          target.postMessage({
+            to: "ThirdPartyApp",
+            msg: "Send To Third Party App from Host"
+          }, "*")
+        }
+      }
       
       this.setState({message: ev});
     });
@@ -31,11 +51,11 @@ class App extends Component<{}, AppState> {
         <div>
           <div><strong>Message Origin: </strong> <span>{this.state.message.origin}</span></div>
           <div><strong>Message Data To: </strong> <span>{this.state.message.data.to}</span></div>
-          <div><strong>Message Data: </strong> <span>{this.state.message.data.msg}</span></div>
+          <div><strong>Message Data: </strong> <span>{JSON.stringify(this.state.message.data)}</span></div>
           <div><strong>Message Type: </strong> <span>{this.state.message.type}</span></div>
         </div>
 
-        <iframe src="http://localhost:3002/" width="500" height="250" title="Third Party"></iframe>
+        {/* <iframe src="http://localhost:3002/" width="500" height="250" title="Third Party"></iframe> */}
       </div>
     );
   }
@@ -43,7 +63,7 @@ class App extends Component<{}, AppState> {
   openWindow = () => {
     const childWindow: Window = window.open("", "ChildWindow", "left=200,top=100,width=500,height=500")!;
 
-    ReactDOM.render(<ChildWindow renderWindow={childWindow} />, childWindow.document.body);
+    ReactDOM.render(<ChildWindow renderWindow={childWindow} iframeElementRef={this.iframeElementRef} />, childWindow.document.body);
   }
 
   sendMessage = () => {
@@ -54,7 +74,7 @@ class App extends Component<{}, AppState> {
   }
 }
 
-type ChildWindowProps = {renderWindow: Window};
+type ChildWindowProps = {renderWindow: Window, iframeElementRef:React.RefObject<HTMLIFrameElement>};
 type ChildWindowState = { message: MessageEvent }
 
 class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
@@ -62,17 +82,36 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
     super(props);
 
     window.addEventListener("message", (ev: MessageEvent) => {
-      // if (ev.data.to !== "ChildWindowHost") {
-      //   return;
-      // }
+      if(props.iframeElementRef.current) {
+        const frame = props.iframeElementRef.current;
+        const target = frame.contentWindow;
 
-      this.setState({message: ev});
+        // if(target) {
+        //   target.postMessage({
+        //     to: "ThirdPartyApp",
+        //     msg: "Send To Third Party App from child window"
+        //   }, "*")
+        // }
+      }
+
+      if (ev.data.to !== "ChildWindow") {
+        return;
+      }
+
     });
 
     props.renderWindow.addEventListener("message", (ev: MessageEvent) => {
-      // if (ev.data.to !== "ChildWindow") {
-      //   return;
-      // }
+
+      if (ev.data.to !== "ChildWindow") {
+        return;
+      }
+
+      window.postMessage({
+        to: "ChildHost",
+        msg: "Init",
+        origin: `ChildWindow:${window.origin}`,
+        originalEvent: ev.data
+      }, '*');
 
       this.setState({message: ev});
     });
@@ -97,11 +136,11 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
         <div>
           <div><strong>Message Origin: </strong> <span>{this.state.message.origin}</span></div>
           <div><strong>Message Data To: </strong> <span>{this.state.message.data.to}</span></div>
-          <div><strong>Message Data: </strong> <span>{this.state.message.data.msg}</span></div>
+          <div><strong>Message Data: </strong> <span>{JSON.stringify(this.state.message.data)}</span></div>
           <div><strong>Message Type: </strong> <span>{this.state.message.type}</span></div>
         </div>
 
-        <iframe src="http://localhost:3002/" width="100%" height="300" title="Third Party"></iframe>
+        <iframe src="http://localhost:3002/" width="100%" height="300" title="Third Party" ref={this.props.iframeElementRef}></iframe>
       </div>
     );
   }
