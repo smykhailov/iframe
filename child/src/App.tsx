@@ -20,17 +20,17 @@ class App extends Component<{}, AppState> {
         originalEvent: ev.data
       }, '*')
 
-      if(this.iframeElementRef.current) {
-        const frame = this.iframeElementRef.current;
-        const target = frame.contentWindow;
+      // if(this.iframeElementRef.current) {
+      //   const frame = this.iframeElementRef.current;
+      //   const target = frame.contentWindow;
 
-        if(target) {
-          target.postMessage({
-            to: "ThirdPartyApp",
-            msg: "Send To Third Party App from Host"
-          }, "*")
-        }
-      }
+      //   if(target) {
+      //     target.postMessage({
+      //       to: "ThirdPartyApp",
+      //       msg: "Send To Third Party App from Host"
+      //     }, "*")
+      //   }
+      // }
       
       this.setState({message: ev});
     });
@@ -62,6 +62,27 @@ class App extends Component<{}, AppState> {
 
   openWindow = () => {
     const childWindow: Window = window.open("", "ChildWindow", "left=200,top=100,width=500,height=500")!;
+    const script = childWindow.document.createElement("script");
+    script.type = 'text/javascript';
+
+    script.innerHTML= `
+      window.addEventListener("message", function (ev) {
+        console.log(ev)
+
+        var iframeEl = window.document.getElementsByTagName("iframe")[0];
+        // var iframeEl = window.targetIframe
+  
+        if(iframeEl) {
+          iframeEl.contentWindow.postMessage({
+            to: "ThirdPartyApp",
+            msg: "Send To Third Party App from proxy",
+            originalEvent: ev.data
+          }, "*")
+        }
+      });
+    `
+
+    childWindow.document.getElementsByTagName("head")[0].append(script);
 
     ReactDOM.render(<ChildWindow renderWindow={childWindow} iframeElementRef={this.iframeElementRef} />, childWindow.document.body);
   }
@@ -81,6 +102,7 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
   constructor(props: ChildWindowProps) {
     super(props);
 
+    (window as any).targetIframe = props.iframeElementRef.current
     window.addEventListener("message", (ev: MessageEvent) => {
       if(props.iframeElementRef.current) {
         const frame = props.iframeElementRef.current;
@@ -117,7 +139,7 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
     });
 
     this.state = {
-      message: { data: {} } as any
+      message: { data: {} } as any 
     }
   }
 
