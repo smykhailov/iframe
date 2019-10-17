@@ -14,7 +14,6 @@ class App extends Component<{}, AppState> {
       this.setState({message: ev, areOriginsEqual: window.parent === ev.source});
     });
 
-    window.parent.postMessage({to: "ChildWindow"}, "*")
 
     this.state = {
       message: { data: {} } as any,
@@ -28,7 +27,6 @@ class App extends Component<{}, AppState> {
         <h1>Third Party App</h1>
 
         <button onClick={this.sendToChildWindow}>Send to Child Window</button>
-        <button onClick={this.sendToChildHost}>Send to Child Host</button>
         <button onClick={() => this.setState({message: { data: {} } as any})}>Clear</button>
 
         <div>
@@ -43,17 +41,7 @@ class App extends Component<{}, AppState> {
   }
 
   sendToChildWindow = () => {
-    window.postMessage({
-      to: "ChildWindow",
-      msg: "Send To Child Window"
-    }, "*");
-  }
-
-  sendToChildHost = () => {
-    window.postMessage({
-      to: "ChildHost",
-      msg: "Send To Child Host"
-    }, "*");
+    window.parent.postMessage({to: "ChildWindow", from: "3rd party"}, "*")
   }
 }
 

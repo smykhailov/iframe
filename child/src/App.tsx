@@ -5,6 +5,8 @@ type AppState = { message: MessageEvent }
 
 class App extends Component<{}, AppState> {
   private iframeElementRef: React.RefObject<HTMLIFrameElement> = React.createRef();
+  private childWindow!: Window;
+
   constructor(props: {}) {
     super(props);
 
@@ -12,25 +14,6 @@ class App extends Component<{}, AppState> {
       if (ev.data.to !== "ChildHost") {
         return;
       }
-
-      window.postMessage({
-        to: "ChildWindow",
-        name: "Init Response",
-        origin: `ChildHost:${window.origin}`,
-        originalEvent: ev.data
-      }, '*')
-
-      // if(this.iframeElementRef.current) {
-      //   const frame = this.iframeElementRef.current;
-      //   const target = frame.contentWindow;
-
-      //   if(target) {
-      //     target.postMessage({
-      //       to: "ThirdPartyApp",
-      //       msg: "Send To Third Party App from Host"
-      //     }, "*")
-      //   }
-      // }
       
       this.setState({message: ev});
     });
@@ -54,43 +37,19 @@ class App extends Component<{}, AppState> {
           <div><strong>Message Data: </strong> <span>{JSON.stringify(this.state.message.data)}</span></div>
           <div><strong>Message Type: </strong> <span>{this.state.message.type}</span></div>
         </div>
-
-        {/* <iframe src="http://localhost:3002/" width="500" height="250" title="Third Party"></iframe> */}
       </div>
     );
   }
 
   openWindow = () => {
-    const childWindow: Window = window.open("", "ChildWindow", "left=200,top=100,width=500,height=500")!;
-    const script = childWindow.document.createElement("script");
-    script.type = 'text/javascript';
-
-    script.innerHTML= `
-      window.addEventListener("message", function (ev) {
-        console.log(ev)
-
-        var iframeEl = window.document.getElementsByTagName("iframe")[0];
-        // var iframeEl = window.targetIframe
-  
-        if(iframeEl) {
-          iframeEl.contentWindow.postMessage({
-            to: "ThirdPartyApp",
-            msg: "Send To Third Party App from proxy",
-            originalEvent: ev.data
-          }, "*")
-        }
-      });
-    `
-
-    childWindow.document.getElementsByTagName("head")[0].append(script);
-
-    ReactDOM.render(<ChildWindow renderWindow={childWindow} iframeElementRef={this.iframeElementRef} />, childWindow.document.body);
+    this.childWindow = window.open("", "ChildWindow", "left=200,top=100,width=500,height=500")!;
+    ReactDOM.render(<ChildWindow renderWindow={this.childWindow} iframeElementRef={this.iframeElementRef} />, this.childWindow.document.body);
   }
 
   sendMessage = () => {
-    window.postMessage({
-      to: "*",
-      msg: "To All Windows"
+    this.childWindow.postMessage({
+      to: "ChildWindow",
+      msg: "To child window"
     }, "*");
   }
 }
@@ -101,26 +60,8 @@ type ChildWindowState = { message: MessageEvent }
 class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
   constructor(props: ChildWindowProps) {
     super(props);
-
-    (window as any).targetIframe = props.iframeElementRef.current
-    window.addEventListener("message", (ev: MessageEvent) => {
-      if(props.iframeElementRef.current) {
-        const frame = props.iframeElementRef.current;
-        const target = frame.contentWindow;
-
-        // if(target) {
-        //   target.postMessage({
-        //     to: "ThirdPartyApp",
-        //     msg: "Send To Third Party App from child window"
-        //   }, "*")
-        // }
-      }
-
-      if (ev.data.to !== "ChildWindow") {
-        return;
-      }
-
-    });
+    
+    this.initProxy();
 
     props.renderWindow.addEventListener("message", (ev: MessageEvent) => {
 
@@ -143,15 +84,39 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
     }
   }
 
+  /**
+   * Create a proxy living in the child window context to pass the messages to the iframe
+   */
+  initProxy() {
+    const script = this.props.renderWindow.document.createElement("script");
+    script.type = 'text/javascript';
+
+    script.innerHTML= `
+      window.addEventListener("message", function (ev) {
+        console.log(ev)
+
+        var iframeEl = window.document.getElementsByTagName("iframe")[0];
+        // var iframeEl = window.targetIframe
+  
+        if(iframeEl) {
+          iframeEl.contentWindow.postMessage({
+            to: "ThirdPartyApp",
+            msg: "Send To Third Party App from proxy",
+            originalEvent: ev.data
+          }, "*")
+        }
+      });
+    `
+
+    this.props.renderWindow.document.getElementsByTagName("head")[0].append(script);
+  }
+
   render() {
     return (
       <div>
         <h1>Child Window (3rd party app host)</h1>
-
-        <button onClick={this.sendToChildHostWdw}>Send to Child Host (using window)</button>
-        <button onClick={this.sendToThirdPartyAppWdw}>Send to Third Party App (using window)</button>
-        <button onClick={this.sendToChildHostTgt}>Send to Child Host (using target)</button>
-        <button onClick={this.sendToThirdPartyAppTgt}>Send to Third Party App (using target)</button>
+        <button onClick={this.sendToThirdPartyAppTgt}>Send to Third Party App</button>
+        <button onClick={this.sendToHost}>Send to host</button>
 
         <button onClick={() => this.setState({message: { data: {} } as any})}>Clear</button>
 
@@ -167,25 +132,11 @@ class ChildWindow extends Component<ChildWindowProps, ChildWindowState> {
     );
   }
 
-  sendToChildHostWdw = () => {
+  sendToHost = () => {
     window.postMessage({
-      to: "ChildHost",
-      msg: "Send To Child Host Using Window"
-    }, "*");
-  }
-
-  sendToThirdPartyAppWdw = () => {
-    window.postMessage({
-      to: "ThirdPartyApp",
-      msg: "Send To Third Party App Using Window"
-    }, "*");
-  }
-
-  sendToChildHostTgt = () => {
-    this.props.renderWindow.postMessage({
-      to: "ChildHost",
-      msg: "Send To Child Host Using Target"
-    }, "*");
+      to: "Child host",
+      msg: "Send to child host"
+    }, '*')
   }
 
   sendToThirdPartyAppTgt = () => {
